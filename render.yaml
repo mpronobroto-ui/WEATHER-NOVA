@@ -1,0 +1,38 @@
+services:
+  # FastAPI backend — set your real secrets (GEMINI_API_KEY, TWILIO_*,
+  # SESSION_SECRET) in the Render dashboard under this service's
+  # Environment tab. Never commit them to .env in the repo.
+  - type: web
+    name: weather-nova-backend
+    runtime: python
+    rootDir: BACKEND
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: WIS2_ENABLE
+        value: "true"
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: ALERT_DISPATCH_MIN_LEVEL
+        value: orange
+      - key: ALERT_DISPATCH_INTERVAL_SECONDS
+        value: "3600"
+      - key: CYCLONE_ALERT_RADIUS_KM
+        value: "100"
+      - key: SESSION_SECRET
+        generateValue: true
+      # Add these yourself in the Render dashboard (Secret):
+      # GEMINI_API_KEY, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
+
+  # Static frontend — after the backend deploys, open the frontend's URL,
+  # tap the API-base link (see index.html's "Backend API base URL" prompt)
+  # and paste the backend service's Render URL once, e.g.
+  # https://weather-nova-backend.onrender.com — it's saved in the browser.
+  - type: web
+    name: weather-nova-frontend
+    runtime: static
+    rootDir: FRONTEND
+    buildCommand: ""
+    staticPublishPath: .

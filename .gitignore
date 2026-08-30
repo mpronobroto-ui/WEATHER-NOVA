@@ -1,0 +1,19 @@
+# Secrets — never commit these
+.env
+BACKEND/.env
+*.env
+!.env.example
+
+# Local data files created at runtime
+BACKEND/subscriptions.json
+BACKEND/users.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
