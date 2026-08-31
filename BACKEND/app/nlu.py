@@ -149,6 +149,22 @@ DAY_WORDS = {
 }
 
 
+WORD_CHAR_PATTERN = r"[\w\u0900-\u097F\u0980-\u09FF\u0B80-\u0BFF\u0C00-\u0C7F]"
+
+
+def _match_keyword(pattern_text: str, text: str) -> bool:
+    """Match a keyword or multi-word phrase against text respecting word boundaries.
+    Avoids accidental partial-word collisions like 'hi' matching inside 'Dakshineswar' or 'Delhi'."""
+    pat = rf"(?<!{WORD_CHAR_PATTERN}){re.escape(pattern_text.lower())}(?!{WORD_CHAR_PATTERN})"
+    return bool(re.search(pat, text, re.IGNORECASE))
+
+
+def _strip_keyword(pattern_text: str, text: str) -> str:
+    """Remove a keyword or multi-word phrase from text respecting word boundaries."""
+    pat = rf"(?<!{WORD_CHAR_PATTERN}){re.escape(pattern_text)}(?!{WORD_CHAR_PATTERN})"
+    return re.sub(pat, " ", text, flags=re.IGNORECASE)
+
+
 @dataclass
 class ParsedQuery:
     intent: str = "current"
@@ -156,13 +172,13 @@ class ParsedQuery:
     day_offset: int = 0
     horizon_days: int = 7
     raw_text: str = ""
-    matched_keywords: list = field(default_factory=list)
+    matched_keywords: list[str] = field(default_factory=list)
 
 
-def _detect_intent(text_lower: str) -> tuple[str, list]:
-    scores: dict[str, list] = {}
+def _detect_intent(text_lower: str) -> tuple[str, list[str]]:
+    scores: dict[str, list[str]] = {}
     for intent, words in INTENT_KEYWORDS.items():
-        hits = [w for w in words if w.lower() in text_lower]
+        hits = [w for w in words if _match_keyword(w, text_lower)]
         if hits:
             scores[intent] = hits
 
@@ -173,22 +189,22 @@ def _detect_intent(text_lower: str) -> tuple[str, list]:
         "eld", "cab", "taxi", "dispatch", "eta", "reroute", "detour", "logistics",
         "driver alert", "fleet risk", "fleet weather", "reduce speed",
     )
-    if "fleet" in scores and any(s in text_lower for s in FLEET_STRONG):
+    if "fleet" in scores and any(_match_keyword(s, text_lower) for s in FLEET_STRONG):
         return "fleet", scores["fleet"]
 
     # Same idea for the newer sector intents: a specific word like "solar"
     # or "crane" should win even if a generic word like "forecast" also
     # matched (e.g. "solar energy forecast for Jaipur").
     ENERGY_STRONG = ("solar", "renewable", "wind turbine", "turbine", "irradiance", "energy grid", "power output")
-    if "energy" in scores and any(s in text_lower for s in ENERGY_STRONG):
+    if "energy" in scores and any(_match_keyword(s, text_lower) for s in ENERGY_STRONG):
         return "energy", scores["energy"]
 
     RETAIL_STRONG = ("retail", "inventory", "stock up", "restock", "shopkeeper", "sales forecast", "consumer demand")
-    if "retail" in scores and any(s in text_lower for s in RETAIL_STRONG):
+    if "retail" in scores and any(_match_keyword(s, text_lower) for s in RETAIL_STRONG):
         return "retail", scores["retail"]
 
     CONSTRUCTION_STRONG = ("crane", "construction site", "work stoppage", "build schedule", "scaffolding", "site manager")
-    if "construction" in scores and any(s in text_lower for s in CONSTRUCTION_STRONG):
+    if "construction" in scores and any(_match_keyword(s, text_lower) for s in CONSTRUCTION_STRONG):
         return "construction", scores["construction"]
 
     # priority order: alert > umbrella (rain questions) > climate > forecast > sectors > current > greeting
@@ -203,7 +219,7 @@ def _detect_intent(text_lower: str) -> tuple[str, list]:
 
 def _detect_day_offset(text_lower: str) -> tuple[int, int]:
     for phrase, offset in DAY_WORDS.items():
-        if phrase in text_lower:
+        if _match_keyword(phrase, text_lower):
             return offset, max(offset + 1, 3)
     if re.search(r"\b(5|five)\s*-?\s*day", text_lower):
         return 0, 5
@@ -214,15 +230,15 @@ def _detect_day_offset(text_lower: str) -> tuple[int, int]:
     return 0, 7
 
 
-def _extract_location(raw_text: str, intent: str, matched_keywords: list) -> str | None:
+def _extract_location(raw_text: str, intent: str, matched_keywords: list[str]) -> str | None:
     text = raw_text
     # remove matched intent keywords first (longest first to avoid partial overlap issues)
     for kw in sorted(matched_keywords, key=len, reverse=True):
-        text = re.sub(re.escape(kw), " ", text, flags=re.IGNORECASE)
+        text = _strip_keyword(kw, text)
 
     # strip day-offset words so "for Kolkata tomorrow" → Kolkata
     for phrase in sorted(DAY_WORDS.keys(), key=len, reverse=True):
-        text = re.sub(re.escape(phrase), " ", text, flags=re.IGNORECASE)
+        text = _strip_keyword(phrase, text)
 
     # common connector patterns: "weather in X", "for X", "near X", "around X"
     m = re.search(
@@ -277,7 +293,10 @@ def parse_query(text: str) -> ParsedQuery:
     location = _extract_location(text, intent, matched)
 
     if intent in ("greeting", "help"):
-        location = None
+        if location:
+            intent = "forecast" if (day_offset > 0 or horizon < 7) else "current"
+        else:
+            location = None
 
     return ParsedQuery(
         intent=intent,

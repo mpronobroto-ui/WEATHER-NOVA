@@ -9,32 +9,154 @@
 <title>Weather Nova — Conversational Weather Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="color-scheme" content="light dark">
+<script>
+  (function(){
+    try {
+      const saved = localStorage.getItem('wgpt_theme');
+      if (saved === 'light' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    } catch(e){}
+  })();
+</script>
 <style>
   :root{
-    --bg: #0b1220;
-    --bg-elev: #121a2b;
-    --text: #e8eef7;
-    --muted: #9aa4b2;
-    --card: rgba(18,26,43,0.92);
+    color-scheme: dark;
+    --bg: #0B1417;
+    --bg-elev: #152428;
+    --text: #EAF2F1;
+    --muted: #82989A;
+    --card: #1B2E32;
 
-    --ink-950:#0B1417;
-    --ink-900:#0F1B1F;
-    --panel-800:#152428;
-    --panel-700:#1B2E32;
-    --line-700:#24393E;
-    --fog-100:#EAF2F1;
-    --fog-300:#B9CBCA;
-    --fog-500:#82989A;
-    --signal-400:#4FA8D8;
-    --signal-500:#3A8FC0;
-    --green:#2E9E5B;
-    --yellow:#E8B93B;
-    --orange:#E0793C;
-    --red:#D6534A;
-    --font-display:'Space Grotesk',sans-serif;
-    --font-body:'Inter',sans-serif;
-    --font-mono:'IBM Plex Mono',monospace;
+    --ink-950: #0B1417;
+    --ink-900: #0F1B1F;
+    --panel-800: #152428;
+    --panel-700: #1B2E32;
+    --line-700: #24393E;
+    --fog-100: #EAF2F1;
+    --fog-300: #B9CBCA;
+    --fog-500: #82989A;
+    --signal-400: #4FA8D8;
+    --signal-500: #3A8FC0;
+    --green: #2E9E5B;
+    --yellow: #E8B93B;
+    --orange: #E0793C;
+    --red: #D6534A;
+
+    --masthead-bg: linear-gradient(180deg, rgba(11,20,23,0.97) 0%, rgba(11,20,23,0.94) 100%);
+    --composer-bg: #0F1B1F;
+    --user-bubble-bg: #2563EB;
+    --user-bubble-text: #FFFFFF;
+    --bot-bubble-bg: #152428;
+    --bot-bubble-text: #EAF2F1;
+    --bot-bubble-border: #24393E;
+    --card-bg: #1B2E32;
+    --card-border: #24393E;
+    --chip-bg: #152428;
+    --chip-border: #24393E;
+    --chip-text: #B9CBCA;
+    --chip-hover-border: #4FA8D8;
+    --chip-hover-text: #EAF2F1;
+    --input-bg: #152428;
+    --input-text: #EAF2F1;
+    --input-border: #24393E;
+    --input-placeholder: #82989A;
+    --send-btn-bg: #4FA8D8;
+    --send-btn-color: #08141A;
+    --hazard-bg: rgba(214,83,74,0.12);
+    --hazard-border: rgba(214,83,74,0.35);
+    --hazard-text: #F3B7B1;
+    --pill-ok-bg: rgba(46,158,91,0.2);
+    --pill-ok-text: #7ddea6;
+    --pill-ok-border: rgba(46,158,91,0.35);
+    --pill-warn-bg: rgba(224,121,60,0.15);
+    --pill-warn-text: #f0b27a;
+    --pill-warn-border: rgba(224,121,60,0.35);
+    --pill-off-bg: rgba(255,255,255,0.06);
+    --pill-off-text: #9aa4b2;
+    --pill-off-border: rgba(255,255,255,0.1);
+    --toggle-btn-bg: rgba(255,255,255,0.06);
+    --toggle-btn-border: #24393E;
+    --toggle-btn-text: #B9CBCA;
+    --theme-btn-border: rgba(255,255,255,0.15);
+    --theme-btn-hover-border: #4FA8D8;
+    --theme-btn-hover-bg: rgba(79,168,216,0.12);
+    --modal-overlay: rgba(0,0,0,0.65);
+    --modal-bg: #152428;
+    --modal-border: #24393E;
+
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
   }
+
+  [data-theme="light"] {
+    color-scheme: light;
+    --bg: #F0F4F8;
+    --bg-elev: #FFFFFF;
+    --text: #0F172A;
+    --muted: #64748B;
+    --card: #FFFFFF;
+
+    --ink-950: #F0F4F8;
+    --ink-900: #FFFFFF;
+    --panel-800: #FFFFFF;
+    --panel-700: #FFFFFF;
+    --line-700: #E2E8F0;
+    --fog-100: #0F172A;
+    --fog-300: #334155;
+    --fog-500: #64748B;
+    --signal-400: #0284C7;
+    --signal-500: #2563EB;
+    --green: #16A34A;
+    --yellow: #CA8A04;
+    --orange: #EA580C;
+    --red: #DC2626;
+
+    --masthead-bg: linear-gradient(180deg, rgba(255,255,255,0.97) 0%, rgba(248,250,252,0.94) 100%);
+    --composer-bg: #FFFFFF;
+    --user-bubble-bg: #2563EB;
+    --user-bubble-text: #FFFFFF;
+    --bot-bubble-bg: #FFFFFF;
+    --bot-bubble-text: #0F172A;
+    --bot-bubble-border: #E2E8F0;
+    --card-bg: #FFFFFF;
+    --card-border: #E2E8F0;
+    --chip-bg: #FFFFFF;
+    --chip-border: #CBD5E1;
+    --chip-text: #334155;
+    --chip-hover-border: #2563EB;
+    --chip-hover-text: #0F172A;
+    --input-bg: #F8FAFC;
+    --input-text: #0F172A;
+    --input-border: #CBD5E1;
+    --input-placeholder: #94A3B8;
+    --send-btn-bg: #2563EB;
+    --send-btn-color: #FFFFFF;
+    --hazard-bg: rgba(220,38,38,0.08);
+    --hazard-border: rgba(220,38,38,0.25);
+    --hazard-text: #B91C1C;
+    --pill-ok-bg: rgba(22,163,74,0.1);
+    --pill-ok-text: #15803D;
+    --pill-ok-border: rgba(22,163,74,0.25);
+    --pill-warn-bg: rgba(234,88,12,0.1);
+    --pill-warn-text: #C2410C;
+    --pill-warn-border: rgba(234,88,12,0.25);
+    --pill-off-bg: rgba(15,23,42,0.06);
+    --pill-off-text: #64748B;
+    --pill-off-border: rgba(15,23,42,0.12);
+    --toggle-btn-bg: #F1F5F9;
+    --toggle-btn-border: #CBD5E1;
+    --toggle-btn-text: #334155;
+    --theme-btn-border: rgba(15,23,42,0.15);
+    --theme-btn-hover-border: #2563EB;
+    --theme-btn-hover-bg: rgba(37,99,235,0.08);
+    --modal-overlay: rgba(15,23,42,0.5);
+    --modal-bg: #FFFFFF;
+    --modal-border: #CBD5E1;
+  }
+
   *{box-sizing:border-box;}
   html,body{height:100%;}
   body{
@@ -46,6 +168,12 @@
     color:var(--fog-100);
     font-family:var(--font-body);
     -webkit-font-smoothing:antialiased;
+  }
+  [data-theme="light"] body{
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(37,99,235,0.05), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(22,163,74,0.04), transparent 55%),
+      var(--ink-950);
   }
   button, select, input{font-family:inherit;}
   ::selection{background:var(--signal-400); color:var(--ink-950);}
@@ -64,8 +192,8 @@
     padding:18px 18px 14px;
     border-bottom:1px solid var(--line-700);
     position:sticky; top:0; z-index:20;
-    background:linear-gradient(180deg, rgba(11,20,23,0.97) 0%, rgba(11,20,23,0.94) 100%);
-    backdrop-filter:blur(6px);
+    background:var(--masthead-bg);
+    backdrop-filter:blur(8px);
   }
   .masthead-row{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
@@ -73,14 +201,17 @@
   .brand{display:flex; align-items:center; gap:10px;}
   .brand-mark{
     width:34px; height:34px; flex:none; border-radius:9px;
-    background:linear-gradient(135deg, var(--signal-400), var(--panel-700));
+    background:linear-gradient(135deg, #38bdf8, #0284c7);
     display:flex; align-items:center; justify-content:center;
     position:relative; overflow:hidden;
+    box-shadow:0 2px 6px rgba(2,132,199,0.25);
   }
   .brand-mark svg{width:20px;height:20px;}
+  .brand-mark svg path{stroke:#ffffff;}
   .brand-name{
     font-family:var(--font-display); font-weight:700; font-size:19px; letter-spacing:-0.01em;
     display:flex; flex-direction:column; line-height:1.05;
+    color:var(--fog-100);
   }
   .brand-name small{
     font-family:var(--font-mono); font-weight:400; font-size:10px; letter-spacing:0.14em;
@@ -90,6 +221,7 @@
     display:flex; align-items:center; gap:8px;
     font-family:var(--font-mono); font-size:11px; color:var(--fog-500);
     padding:6px 10px; border:1px solid var(--line-700); border-radius:100px;
+    background:var(--panel-800);
     white-space:nowrap;
   }
   .station-status .dot{width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 0 3px rgba(46,158,91,0.18);}
@@ -111,11 +243,12 @@
   .chip-row::-webkit-scrollbar{display:none;}
   .chip{
     flex:none; font-family:var(--font-mono); font-size:12px; letter-spacing:0.02em;
-    color:var(--fog-300); background:var(--panel-800); border:1px solid var(--line-700);
+    color:var(--chip-text); background:var(--chip-bg); border:1px solid var(--chip-border);
     padding:8px 13px; border-radius:8px; cursor:pointer; white-space:nowrap;
-    transition:border-color .15s ease, color .15s ease, transform .1s ease;
+    box-shadow:0 1px 2px rgba(0,0,0,0.03);
+    transition:border-color .15s ease, color .15s ease, transform .1s ease, background-color .15s ease;
   }
-  .chip:hover{border-color:var(--signal-500); color:var(--fog-100);}
+  .chip:hover{border-color:var(--chip-hover-border); color:var(--chip-hover-text);}
   .chip:active{transform:scale(0.97);}
 
   /* ---------- Chat transcript ---------- */
@@ -130,15 +263,28 @@
   .bubble{
     padding:12px 15px; border-radius:14px; font-size:14.5px; line-height:1.5;
   }
-  .msg.user .bubble{background:var(--signal-500); color:#08141A; border-bottom-right-radius:4px; font-weight:500;}
-  .msg.bot .bubble{background:var(--panel-800); border:1px solid var(--line-700); border-bottom-left-radius:4px;}
+  .msg.user .bubble{
+    background:var(--user-bubble-bg);
+    color:var(--user-bubble-text);
+    border-bottom-right-radius:4px;
+    font-weight:500;
+    box-shadow:0 2px 8px rgba(37,99,235,0.15);
+  }
+  .msg.bot .bubble{
+    background:var(--bot-bubble-bg);
+    color:var(--bot-bubble-text);
+    border:1px solid var(--bot-bubble-border);
+    border-bottom-left-radius:4px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.04);
+  }
   .msg-meta{font-family:var(--font-mono); font-size:10px; color:var(--fog-500); padding:0 4px;}
 
   /* ---------- Bulletin card (signature element) ---------- */
   .bulletin{
     width:100%; margin-top:2px;
-    border:1px solid var(--line-700); border-radius:12px; overflow:hidden;
-    background:var(--panel-700);
+    border:1px solid var(--card-border); border-radius:12px; overflow:hidden;
+    background:var(--card-bg);
+    box-shadow:0 4px 14px rgba(0,0,0,0.05);
   }
   .bulletin-head{
     display:flex; align-items:center; justify-content:space-between;
@@ -150,6 +296,7 @@
     display:inline-flex; align-items:center; gap:6px;
     font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em;
     padding:4px 9px; border-radius:100px; border:1px solid var(--line-700);
+    background:var(--panel-800); color:var(--fog-100);
   }
   .alert-pill .dot{width:8px; height:8px; border-radius:50%;}
   .alert-green .dot{background:var(--green);} .alert-yellow .dot{background:var(--yellow);}
@@ -161,23 +308,29 @@
   .stat .v{font-family:var(--font-mono); font-size:15px; font-weight:600; color:var(--fog-100);}
   .hazard-chips{display:flex; flex-wrap:wrap; gap:6px;}
   .data-source{
-    margin-top:8px; font-size:11px; opacity:0.75; line-height:1.35;
-    border-top:1px solid rgba(255,255,255,0.08); padding-top:6px;
+    margin-top:8px; font-size:11px; color:var(--fog-500); line-height:1.35;
+    border-top:1px solid var(--line-700); padding-top:6px;
   }
   .status-strip{
     display:flex; flex-wrap:wrap; gap:6px; justify-content:center;
     padding:6px 10px; font-size:11px;
+    border-bottom:1px solid var(--line-700);
+    background:var(--panel-800);
+    color:var(--fog-500);
   }
-  .pill-ok{background:rgba(46,158,91,0.2); color:#7ddea6; border:1px solid rgba(46,158,91,0.35); border-radius:999px; padding:2px 8px;}
-  .pill-warn{background:rgba(224,121,60,0.15); color:#f0b27a; border:1px solid rgba(224,121,60,0.35); border-radius:999px; padding:2px 8px;}
-  .pill-off{background:rgba(255,255,255,0.06); color:#9aa4b2; border:1px solid rgba(255,255,255,0.1); border-radius:999px; padding:2px 8px;}
+  .pill-ok{background:var(--pill-ok-bg); color:var(--pill-ok-text); border:1px solid var(--pill-ok-border); border-radius:999px; padding:2px 8px; font-weight:500;}
+  .pill-warn{background:var(--pill-warn-bg); color:var(--pill-warn-text); border:1px solid var(--pill-warn-border); border-radius:999px; padding:2px 8px; font-weight:500;}
+  .pill-off{background:var(--pill-off-bg); color:var(--pill-off-text); border:1px solid var(--pill-off-border); border-radius:999px; padding:2px 8px;}
   .demo-banner{
-    font-size:12px; opacity:0.85; padding:6px 12px; text-align:center;
-    border-bottom:1px solid rgba(255,255,255,0.06);
+    font-size:12px; padding:6px 12px; text-align:center;
+    border-bottom:1px solid var(--line-700);
+    background:var(--panel-800);
+    color:var(--fog-300);
   }
   .hazard-chip{
     font-size:11px; padding:4px 9px; border-radius:100px;
-    background:rgba(214,83,74,0.12); border:1px solid rgba(214,83,74,0.35); color:#F3B7B1;
+    background:var(--hazard-bg); border:1px solid var(--hazard-border); color:var(--hazard-text);
+    font-weight:500;
   }
   .coords{font-family:var(--font-mono); font-size:10px; color:var(--fog-500);}
   .timeline{display:flex; gap:5px; padding-top:2px;}
@@ -195,24 +348,27 @@
   .composer{
     padding:12px 14px calc(14px + env(safe-area-inset-bottom));
     border-top:1px solid var(--line-700);
-    background:var(--ink-900);
+    background:var(--composer-bg);
     display:flex; flex-direction:column; gap:8px;
   }
   .composer-row{display:flex; align-items:flex-end; gap:8px;}
   select.lang-select{
-    background:var(--panel-800); color:var(--fog-100); border:1px solid var(--line-700);
+    background:var(--input-bg); color:var(--input-text); border:1px solid var(--input-border);
     border-radius:9px; padding:9px 8px; font-size:12px; font-family:var(--font-mono); max-width:92px;
+    outline:none; cursor:pointer;
   }
+  select.lang-select:focus{border-color:var(--signal-500);}
   .input-wrap{
-    flex:1; display:flex; align-items:center; background:var(--panel-800);
-    border:1px solid var(--line-700); border-radius:12px; padding:4px 4px 4px 13px;
+    flex:1; display:flex; align-items:center; background:var(--input-bg);
+    border:1px solid var(--input-border); border-radius:12px; padding:4px 4px 4px 13px;
+    transition:border-color .15s ease, box-shadow .15s ease;
   }
-  .input-wrap:focus-within{border-color:var(--signal-500);}
+  .input-wrap:focus-within{border-color:var(--signal-500); box-shadow:0 0 0 3px rgba(37,99,235,0.12);}
   #textInput{
-    flex:1; border:none; background:transparent; color:var(--fog-100); font-size:14.5px;
+    flex:1; border:none; background:transparent; color:var(--input-text); font-size:14.5px;
     padding:9px 4px; outline:none; font-family:var(--font-body);
   }
-  #textInput::placeholder{color:var(--fog-500);}
+  #textInput::placeholder{color:var(--input-placeholder);}
   .icon-btn{
     width:36px; height:36px; border-radius:9px; border:none; background:transparent;
     color:var(--fog-300); display:flex; align-items:center; justify-content:center; cursor:pointer;
@@ -225,18 +381,38 @@
   }
   .send-btn{
     width:40px; height:40px; border-radius:10px; border:none; cursor:pointer;
-    background:var(--signal-400); color:#08141A; display:flex; align-items:center; justify-content:center;
-    flex:none; transition:transform .1s ease, opacity .15s ease;
+    background:var(--send-btn-bg); color:var(--send-btn-color); display:flex; align-items:center; justify-content:center;
+    flex:none; transition:transform .1s ease, opacity .15s ease, background .15s ease;
   }
   .send-btn:active{transform:scale(0.94);}
   .send-btn:disabled{opacity:0.4; cursor:default;}
   .composer-sub{
     display:flex; align-items:center; justify-content:space-between; gap:8px;
     font-family:var(--font-mono); font-size:10.5px; color:var(--fog-500);
+    flex-wrap:wrap;
   }
-  .subtle-btn{background:none; border:none; color:var(--fog-500); font-family:var(--font-mono); font-size:10.5px; cursor:pointer; display:flex; align-items:center; gap:5px;}
-  .subtle-btn:hover{color:var(--signal-400);}
+  .subtle-btn{
+    background:none; border:none; color:var(--fog-500); font-family:var(--font-mono); font-size:10.5px;
+    cursor:pointer; display:flex; align-items:center; gap:5px; padding:4px 6px; border-radius:6px;
+    transition:color .15s ease, background-color .15s ease;
+  }
+  .subtle-btn:hover{color:var(--signal-500); background:var(--theme-btn-hover-bg);}
   .subtle-btn svg{width:12px;height:12px;}
+
+  .map-wrap{margin-top:8px; border-radius:12px; overflow:hidden; border:1px solid var(--line-700);}
+  .map-wrap iframe{width:100%; height:180px; border:0; display:block;}
+  .theme-btn{
+    cursor:pointer; border:1px solid var(--theme-btn-border); background:var(--toggle-btn-bg);
+    color:var(--toggle-btn-text); border-radius:999px; padding:4px 10px; font-size:11.5px; font-family:var(--font-mono);
+    transition:border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .theme-btn:hover{border-color:var(--theme-btn-hover-border); color:var(--fog-100); background:var(--theme-btn-hover-bg);}
+  #speakToggle{
+    background:var(--toggle-btn-bg); border:1px solid var(--toggle-btn-border);
+    color:var(--toggle-btn-text); border-radius:6px; padding:4px 9px; font-family:var(--font-mono);
+    font-size:10.5px; cursor:pointer; transition:all .15s ease;
+  }
+  #speakToggle:hover{border-color:var(--signal-500); color:var(--fog-100);}
 
   @media (max-width:480px){
     .brand-name{font-size:17px;}
@@ -244,30 +420,6 @@
   }
 
   :focus-visible{outline:2px solid var(--signal-400); outline-offset:2px;}
-
-  [data-theme="light"]{
-    --bg: #f4f7fb;
-    --bg-elev: #ffffff;
-    --text: #0f172a;
-    --muted: #64748b;
-    --card: #ffffff;
-    --fog-100: #0f172a;
-    --fog-300: #334155;
-    --fog-500: #64748b;
-    --panel: #ffffff;
-    --line: rgba(15,23,42,0.08);
-  }
-  [data-theme="light"] body{ background: var(--bg); color: var(--text); }
-  [data-theme="light"] .bubble{ background: #fff; color: #0f172a; border: 1px solid rgba(15,23,42,0.08); }
-  [data-theme="light"] .msg.user .bubble{ background: #2563eb; color: #fff; }
-  [data-theme="light"] .bulletin{ background: #fff; border: 1px solid rgba(15,23,42,0.1); }
-  [data-theme="light"] .chip{ background: #fff; border-color: rgba(15,23,42,0.12); color: #0f172a; }
-  [data-theme="light"] header, .composer, .demo-banner, .status-strip{ background: rgba(255,255,255,0.9); color: #0f172a; }
-  .map-wrap{ margin-top:8px; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
-  .map-wrap iframe{ width:100%; height:180px; border:0; display:block; }
-  .theme-btn{ cursor:pointer; border:1px solid rgba(255,255,255,0.15); background:transparent; color:inherit;
-    border-radius:999px; padding:4px 10px; font-size:12px; }
-
 </style>
 </head>
 <body>
@@ -277,7 +429,7 @@
     <div class="masthead-row">
       <div class="brand">
         <div class="brand-mark">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M4 15a4 4 0 0 1 1.2-7.86A5.5 5.5 0 0 1 15.8 8.06 4.5 4.5 0 0 1 15 17H6a2 2 0 0 1-2-2Z" stroke="#08141A" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 15a4 4 0 0 1 1.2-7.86A5.5 5.5 0 0 1 15.8 8.06 4.5 4.5 0 0 1 15 17H6a2 2 0 0 1-2-2Z" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round"/></svg>
         </div>
         <div class="brand-name">Weather Nova<small id="langNameTag">EN · Conversational met engine</small></div>
       </div>
@@ -296,23 +448,23 @@
     </div>
   </header>
 
-  <div id="loginModal" style="display:none; position:fixed; inset:0; z-index:60; background:rgba(0,0,0,0.55); align-items:center; justify-content:center;">
-    <div style="background:var(--bg-elev); border:1px solid var(--line-700); border-radius:14px; padding:20px; width:90%; max-width:340px; color:var(--text);">
+  <div id="loginModal" style="display:none; position:fixed; inset:0; z-index:60; background:var(--modal-overlay); align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:var(--modal-bg); border:1px solid var(--modal-border); border-radius:14px; padding:20px; width:90%; max-width:340px; color:var(--fog-100); box-shadow:0 20px 25px -5px rgba(0,0,0,0.2);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <strong id="loginTitle">Log in for cyclone SMS alerts</strong>
         <button class="theme-btn" onclick="closeLoginModal()">✕</button>
       </div>
       <div id="loginStep1">
-        <p style="font-size:13px; color:var(--muted); margin:4px 0 10px;">We'll text you a one-time code — no password needed.</p>
-        <input id="loginPhone" type="tel" placeholder="+91XXXXXXXXXX" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--line-700); background:transparent; color:inherit; margin-bottom:10px;">
-        <button class="theme-btn" style="width:100%;" onclick="requestOtp()">Send code</button>
+        <p style="font-size:13px; color:var(--fog-500); margin:4px 0 10px;">We'll text you a one-time code — no password needed.</p>
+        <input id="loginPhone" type="tel" placeholder="+91XXXXXXXXXX" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--input-text); margin-bottom:10px; box-sizing:border-box; outline:none;">
+        <button class="theme-btn" style="width:100%; padding:8px; background:var(--signal-500); color:#ffffff; border:none; font-weight:600;" onclick="requestOtp()">Send code</button>
       </div>
       <div id="loginStep2" style="display:none;">
-        <p style="font-size:13px; color:var(--muted); margin:4px 0 10px;">Enter the 6-digit code we sent.</p>
-        <input id="loginOtp" type="text" inputmode="numeric" maxlength="6" placeholder="123456" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--line-700); background:transparent; color:inherit; margin-bottom:10px;">
-        <button class="theme-btn" style="width:100%;" onclick="verifyOtpAndSubscribe()">Verify & enable cyclone alerts</button>
+        <p style="font-size:13px; color:var(--fog-500); margin:4px 0 10px;">Enter the 6-digit code we sent.</p>
+        <input id="loginOtp" type="text" inputmode="numeric" maxlength="6" placeholder="123456" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--input-text); margin-bottom:10px; box-sizing:border-box; outline:none;">
+        <button class="theme-btn" style="width:100%; padding:8px; background:var(--signal-500); color:#ffffff; border:none; font-weight:600;" onclick="verifyOtpAndSubscribe()">Verify & enable cyclone alerts</button>
       </div>
-      <div id="loginMsg" style="font-size:12px; color:var(--muted); margin-top:8px;"></div>
+      <div id="loginMsg" style="font-size:12px; color:var(--fog-500); margin-top:8px;"></div>
     </div>
   </div>
 
@@ -347,7 +499,7 @@
         </button>
       </div>
       <button class="send-btn" id="sendBtn" aria-label="Send message">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M4 12l16-7-6 16-2.5-6.5L4 12Z" stroke="#08141A" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M4 12l16-7-6 16-2.5-6.5L4 12Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
       </button>
     </div>
     <div class="composer-sub">
@@ -356,7 +508,7 @@
         Use my location
       </button>
       <button class="subtle-btn theme-btn" id="themeBtn">🌙 Dark</button>
-        <button id="speakToggle">🔊 Read replies aloud: OFF</button>
+      <button id="speakToggle">🔊 Read replies aloud: OFF</button>
       <button class="subtle-btn" id="apiCfgBtn">⚙ API endpoint</button>
     </div>
   </div>
@@ -514,10 +666,34 @@
     const card = document.createElement("div");
     card.className = "bulletin";
 
+    if(data.error){
+      let html = `
+      <div class="bulletin-head">
+        <span class="loc">${escapeHtml(data.location || "Weather Alert")}</span>
+        <span class="alert-pill alert-yellow"><span class="dot"></span>Temporary Notice</span>
+      </div>
+      <div class="bulletin-body">
+        <div style="font-size:13px; color:var(--fog-300);">${escapeHtml(data.reason || "Live weather forecast is temporarily unavailable.")}</div>`;
+      if(data.map && data.map.lat != null && data.map.lon != null){
+        const mlat = data.map.lat, mlon = data.map.lon, z = data.map.zoom || 7;
+        const sat = `https://maps.google.com/maps?q=${mlat},${mlon}&z=${z}&t=k&output=embed`;
+        html += `<div class="map-wrap"><iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="${sat}" title="Satellite map"></iframe></div>`;
+        html += `<div class="coords">📍 Map center ${Number(mlat).toFixed(2)}°, ${Number(mlon).toFixed(2)}° · satellite view</div>`;
+      }
+      html += `</div>`;
+      card.innerHTML = html;
+      return card;
+    }
+
     const day = data.day || {};
     const current = data.current || {};
     const alert = data.alert || {level:"green", hazards:[]};
-    const temp = current.temperature !== undefined ? current.temperature : day.temperature_2m_max;
+    const temp = current.temperature !== undefined && current.temperature !== null
+      ? current.temperature
+      : (current.temperature_2m !== undefined && current.temperature_2m !== null ? current.temperature_2m : day.temperature_2m_max);
+    const wind = current.windspeed !== undefined && current.windspeed !== null
+      ? current.windspeed
+      : (current.wind_speed_10m !== undefined && current.wind_speed_10m !== null ? current.wind_speed_10m : day.windspeed_10m_max);
 
     let html = `
       <div class="bulletin-head">
@@ -526,10 +702,10 @@
       </div>
       <div class="bulletin-body">
         <div class="stat-grid">
-          <div class="stat"><span class="k">Temp</span><span class="v">${temp !== undefined ? Math.round(temp*10)/10 + "°C" : "—"}</span></div>
+          <div class="stat"><span class="k">Temp</span><span class="v">${temp !== undefined && temp !== null ? Math.round(temp*10)/10 + "°C" : "—"}</span></div>
           <div class="stat"><span class="k">Range</span><span class="v">${fmtRange(day)}</span></div>
-          <div class="stat"><span class="k">Rain</span><span class="v">${day.precipitation_probability_max ?? "—"}%</span></div>
-          <div class="stat"><span class="k">Wind</span><span class="v">${day.windspeed_10m_max !== undefined ? Math.round(day.windspeed_10m_max) + " km/h" : "—"}</span></div>
+          <div class="stat"><span class="k">Rain</span><span class="v">${day.precipitation_probability_max != null ? day.precipitation_probability_max + "%" : "—"}</span></div>
+          <div class="stat"><span class="k">Wind</span><span class="v">${wind !== undefined && wind !== null ? Math.round(wind) + " km/h" : "—"}</span></div>
         </div>`;
 
     if(alert.hazards && alert.hazards.length){
@@ -600,7 +776,7 @@
   }
 
   function fmtRange(day){
-    if(day.temperature_2m_min === undefined || day.temperature_2m_max === undefined) return "—";
+    if(!day || day.temperature_2m_min == null || day.temperature_2m_max == null) return "—";
     return Math.round(day.temperature_2m_min) + "–" + Math.round(day.temperature_2m_max) + "°C";
   }
   function colorForLevel(level){
@@ -639,10 +815,19 @@
   function applyTheme(mode){
     document.documentElement.setAttribute('data-theme', mode);
     localStorage.setItem('wgpt_theme', mode);
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if(metaTheme){
+      metaTheme.setAttribute('content', mode === 'light' ? '#f0f4f8' : '#0b1220');
+    }
+    const metaScheme = document.querySelector('meta[name="color-scheme"]');
+    if(metaScheme){
+      metaScheme.setAttribute('content', mode === 'light' ? 'light' : 'dark');
+    }
     const b = el('themeBtn');
     if(b) b.textContent = mode === 'light' ? '☀️ Light' : '🌙 Dark';
   }
-  applyTheme(localStorage.getItem('wgpt_theme') || 'dark');
+  const initialTheme = localStorage.getItem('wgpt_theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  applyTheme(initialTheme);
   const themeBtn = el('themeBtn');
   if(themeBtn){
     themeBtn.addEventListener('click', () => {

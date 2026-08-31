@@ -68,6 +68,8 @@ async def _call_gemini(prompt: str) -> str | None:
 
 
 async def _call_ollama(prompt: str) -> str | None:
+    if not OLLAMA_URL:
+        return None
     async with httpx.AsyncClient(timeout=8.0) as client:
         try:
             r = await client.post(
@@ -78,6 +80,7 @@ async def _call_ollama(prompt: str) -> str | None:
             return r.json().get("response")
         except Exception:
             return None
+
 
 
 async def ask_llm(prompt: str) -> str | None:

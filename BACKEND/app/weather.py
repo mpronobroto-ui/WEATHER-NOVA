@@ -2,16 +2,12 @@
 Weather Nova Backend — Weather Core Module
 
 Single seam to the NWP model provider. Uses Open-Meteo's free forecast +
-archive APIs (no API key required) so the whole app runs out of the box,
-per the project brief ("no mocked weather, no API keys required to demo").
-Swap this file for IMD/NCMRWF GFS or a self-hosted WRF store without
-touching any other module — every other file only calls the functions
-below and expects the Open-Meteo-shaped `daily` / `current_weather` dicts.
+archive APIs (no API key required) so the whole app runs out of the box.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
-import os
 from datetime import date
 from typing import Any, Dict, List
 import httpx
@@ -76,17 +72,29 @@ def weather_code_label(code: Any) -> str:
         return "changeable conditions"
 
 
-async def _get(url: str, params: Dict[str, Any]) -> Dict[str, Any]:
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(url, params=params)
-            if response.status_code == 200:
-                return response.json()
-            logger.warning("Weather API responded with status: %d", response.status_code)
-            return {"error": True, "reason": f"Upstream status {response.status_code}", "daily": {}}
-    except Exception as exc:
-        logger.warning("Weather API request failed: %s", exc)
-        return {"error": True, "reason": "Network execution timeout.", "daily": {}}
+async def _get(url: str, params: Dict[str, Any], max_retries: int = 2) -> Dict[str, Any]:
+    last_err = "Network execution timeout."
+    for attempt in range(max_retries + 1):
+        try:
+            async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
+                response = await client.get(url, params=params)
+                if response.status_code == 200:
+                    return response.json()
+                if response.status_code == 429:
+                    logger.warning("Weather API rate-limited (429) on attempt %d", attempt + 1)
+                    if attempt < max_retries:
+                        await asyncio.sleep(1.0 * (attempt + 1))
+                        continue
+                    return {"error": True, "reason": "Weather models are temporarily rate-limited. Please retry shortly.", "daily": {}}
+                logger.warning("Weather API responded with status: %d", response.status_code)
+                last_err = f"Upstream status {response.status_code}"
+        except Exception as exc:
+            logger.warning("Weather API request failed (attempt %d/%d): %s", attempt + 1, max_retries + 1, exc)
+            last_err = str(exc) or "Network timeout connecting to weather provider."
+            if attempt < max_retries:
+                await asyncio.sleep(0.8)
+
+    return {"error": True, "reason": last_err, "daily": {}}
 
 
 async def get_forecast(lat: float, lon: float, days: int = 7) -> Dict[str, Any]:
@@ -96,20 +104,60 @@ async def get_forecast(lat: float, lon: float, days: int = 7) -> Dict[str, Any]:
         "longitude": lon,
         "daily": ",".join(DAILY_VARS),
         "hourly": "precipitation_probability,visibility,windspeed_10m",
-        "current_weather": True,
+        "current_weather": "true",
+        "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m",
         "timezone": "auto",
         "forecast_days": max(1, min(days, 16)),
     }
     data = await _get(FORECAST_URL, params)
     if data.get("error"):
-        return data
-    # Normalise Open-Meteo's `current_weather` key so composer.py's
-    # `.get("temperature", ...)` lookup always finds a value.
-    current = data.get("current_weather") or {}
+        # Attempt fallback with simplified params if full request failed
+        simple_params = {
+            "latitude": lat,
+            "longitude": lon,
+            "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,windspeed_10m_max,weathercode",
+            "current_weather": "true",
+            "timezone": "auto",
+            "forecast_days": max(1, min(days, 7)),
+        }
+        fallback_data = await _get(FORECAST_URL, simple_params, max_retries=1)
+        if not fallback_data.get("error") and fallback_data.get("daily"):
+            data = fallback_data
+        else:
+            return data
+
+    daily = data.get("daily") or {}
+    current_raw = data.get("current") or {}
+    current_w = data.get("current_weather") or {}
+
+    # Extract best available current temperature, wind, and weathercode
+    temp = current_raw.get("temperature_2m") if "temperature_2m" in current_raw else current_w.get("temperature")
+    if temp is None and daily.get("temperature_2m_max"):
+        temp = daily["temperature_2m_max"][0]
+
+    wind = current_raw.get("wind_speed_10m") if "wind_speed_10m" in current_raw else current_w.get("windspeed")
+    if wind is None and daily.get("windspeed_10m_max"):
+        wind = daily["windspeed_10m_max"][0]
+
+    code = current_raw.get("weather_code") if "weather_code" in current_raw else current_w.get("weathercode")
+    if code is None and daily.get("weathercode"):
+        code = daily["weathercode"][0]
+
+    normalized_current = {
+        "temperature": temp,
+        "temperature_2m": temp,
+        "windspeed": wind,
+        "wind_speed_10m": wind,
+        "weathercode": code,
+        "weather_code": code,
+        "relative_humidity": current_raw.get("relative_humidity_2m"),
+        "time": current_raw.get("time") or current_w.get("time"),
+    }
+
     return {
-        "daily": data.get("daily", {}),
+        "daily": daily,
         "hourly": data.get("hourly", {}),
-        "current_weather": current,
+        "current_weather": normalized_current,
     }
 
 
@@ -137,9 +185,7 @@ async def get_historical_summary(lat: float, lon: float, years_back: int = 10) -
 
 
 async def get_marine_forecast(lat: float, lon: float, days: int = 3) -> Dict[str, Any]:
-    """Real ocean swell/wave data from Open-Meteo's free Marine Weather API
-    (no key required). Inland coordinates legitimately return no wave data —
-    that's an absent-data case for callers to handle, not an error to fake."""
+    """Real ocean swell/wave data from Open-Meteo's free Marine Weather API."""
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -151,10 +197,7 @@ async def get_marine_forecast(lat: float, lon: float, days: int = 3) -> Dict[str
 
 
 async def get_energy_forecast(lat: float, lon: float, days: int = 2) -> Dict[str, Any]:
-    """Real hourly solar-irradiance and 80m wind-speed series for a simple
-    renewable-energy outlook. This is genuine Open-Meteo NWP data — not a
-    physics-based generation model (GraphCast / Prithvi-WxC), which this
-    environment has no infrastructure to run."""
+    """Real hourly solar-irradiance and 80m wind-speed series for a simple renewable-energy outlook."""
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -166,10 +209,7 @@ async def get_energy_forecast(lat: float, lon: float, days: int = 2) -> Dict[str
 
 
 def summarize_yearly_trend(datasets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Reduces each year's raw daily archive into one summary row per year,
-    oldest first, so composer.py can slice `trend[-5:]` for a recent-years
-    snapshot and format each row with `.avg_max_temp_c` / `.total_rainfall_mm`.
-    """
+    """Reduces each year's raw daily archive into one summary row per year."""
     trend: List[Dict[str, Any]] = []
     for entry in sorted(datasets, key=lambda e: e["year"]):
         temps = entry["data"].get("temperature_2m_max", []) or []

@@ -14,7 +14,7 @@ import os
 import threading
 
 STORE_PATH = os.getenv("SUBSCRIPTIONS_PATH", os.path.join(os.path.dirname(__file__), "..", "subscriptions.json"))
-_lock = threading.Lock()
+_lock = threading.RLock()
 
 
 def _load() -> list[dict]:
@@ -42,7 +42,7 @@ def add_subscription(
 ) -> dict:
     with _lock:
         items = _load()
-        items = [i for i in items if i["phone"] != phone]  # replace existing
+        items = [i for i in items if i.get("phone") != phone]  # replace existing
         entry = {
             "phone": phone,
             "lat": lat,
@@ -59,7 +59,7 @@ def add_subscription(
 def remove_subscription(phone: str) -> bool:
     with _lock:
         items = _load()
-        new_items = [i for i in items if i["phone"] != phone]
+        new_items = [i for i in items if i.get("phone") != phone]
         changed = len(new_items) != len(items)
         if changed:
             _save(new_items)
@@ -74,6 +74,6 @@ def list_subscriptions() -> list[dict]:
 def get_subscription(phone: str) -> dict | None:
     with _lock:
         for item in _load():
-            if item["phone"] == phone:
+            if item.get("phone") == phone:
                 return item
     return None

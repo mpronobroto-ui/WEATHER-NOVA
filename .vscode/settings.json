@@ -1,0 +1,14 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/BACKEND"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}/BACKEND"
+  ],
+  "python.testing.pytestArgs": [
+    "BACKEND/tests"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true
+}
