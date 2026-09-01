@@ -253,7 +253,7 @@ async def handle_message(
         }
 
     location_label = (place.get("name") if place else None) or location_text or "your location"
-    if place and place.get("admin1"):
+    if place and place.get("admin1") and place["admin1"].lower() not in location_label.lower():
         location_label = f"{location_label}, {place['admin1']}"
 
     # Parallel: district GIS + forecast (faster response)

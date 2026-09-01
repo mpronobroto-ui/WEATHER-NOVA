@@ -48,9 +48,17 @@ def test_parse_query_intents():
     assert p12.intent == "current"
     assert p12.location_text == "kathmandu"
 
-    p13 = nlu.parse_query("hello weather in jaipur")
-    assert p13.intent == "current"
-    assert "jaipur" in (p13.location_text or "").lower()
+    p14 = nlu.parse_query("weather at rajarhat, kolkata")
+    assert p14.intent == "current"
+    assert "rajarhat, kolkata" in (p14.location_text or "").lower()
+
+    p15 = nlu.parse_query("weather at chinar park, kolkata")
+    assert p15.intent == "current"
+    assert "chinar park, kolkata" in (p15.location_text or "").lower()
+
+    p16 = nlu.parse_query("weather in bandra, mumbai")
+    assert p16.intent == "current"
+    assert "bandra, mumbai" in (p16.location_text or "").lower()
 
 
 def test_parse_query_multilingual():
@@ -64,5 +72,6 @@ def test_parse_query_multilingual():
 def test_split_multi_location():
     assert nlu.split_multi_location("Chennai and Kolkata") == ["Chennai", "Kolkata"]
     assert nlu.split_multi_location("Mumbai / Pune") == ["Mumbai", "Pune"]
+    assert nlu.split_multi_location("Rajarhat, Kolkata") == ["Rajarhat, Kolkata"]
     assert nlu.split_multi_location("Delhi") == ["Delhi"]
     assert nlu.split_multi_location("") == []

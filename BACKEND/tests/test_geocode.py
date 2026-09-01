@@ -82,6 +82,31 @@ async def test_resolve_international():
 
 
 @pytest.mark.asyncio
+async def test_resolve_rajarhat_and_chinar_park():
+    # Multi-part with Kolkata qualifier
+    res_rk = await geocode.resolve_location("rajarhat, kolkata")
+    assert res_rk is not None
+    assert "Bengal" in str(res_rk.get("admin1")) or "Kolkata" in str(res_rk.get("admin2"))
+    assert 22.4 <= res_rk["latitude"] <= 22.8
+    assert 88.3 <= res_rk["longitude"] <= 88.6
+
+    res_cpk = await geocode.resolve_location("chinar park, kolkata")
+    assert res_cpk is not None
+    assert "Bengal" in str(res_cpk.get("admin1")) or "Kolkata" in str(res_cpk.get("admin2")) or "Bidhannagar" in str(res_cpk.get("admin2"))
+    assert 22.4 <= res_cpk["latitude"] <= 22.8
+    assert 88.3 <= res_cpk["longitude"] <= 88.6
+
+    # Standalone names
+    res_r = await geocode.resolve_location("rajarhat")
+    assert res_r is not None
+    assert "Bengal" in str(res_r.get("admin1")) or 22.4 <= res_r["latitude"] <= 22.8
+
+    res_cp = await geocode.resolve_location("chinar park")
+    assert res_cp is not None
+    assert "Bengal" in str(res_cp.get("admin1")) or "Kolkata" in str(res_cp.get("admin2")) or (22.4 <= res_cp["latitude"] <= 22.8)
+
+
+@pytest.mark.asyncio
 async def test_resolve_empty():
     assert await geocode.resolve_location("") is None
     assert await geocode.resolve_location("   ") is None
