@@ -40,7 +40,7 @@ OTP_MAX_ATTEMPTS = 5
 
 USERS_PATH = os.getenv("USERS_PATH", os.path.join(os.path.dirname(__file__), "..", "users.json"))
 
-_lock = threading.Lock()
+_lock = threading.RLock()
 _otp_store: dict[str, dict] = {}  # phone -> {hash, expires_at, attempts}
 
 

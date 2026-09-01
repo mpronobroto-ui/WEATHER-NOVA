@@ -17,17 +17,13 @@ ARCHITECTURE.md for the SMS early-warning feature.
 """
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 import asyncio
 import logging
 import os
 
 from dotenv import load_dotenv
 
-# Must run BEFORE `from app import ...` below — several app modules (llm.py,
-# sms.py, auth.py, wis2.py) read os.getenv(...) at *import time* to set
-# module-level constants like GEMINI_API_KEY. If .env is loaded any later
-# than this, those constants are already frozen as None/empty and the key
-# is silently ignored for the lifetime of the process.
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -39,7 +35,44 @@ from app import auth, composer, gis, i18n, llm, sms, subscriptions, wis2
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("weathergpt")
 
-app = FastAPI(title="Weather Nova API", version="1.0.0")
+_dispatch_task: asyncio.Task | None = None
+DISPATCH_INTERVAL_SECONDS = int(os.getenv("ALERT_DISPATCH_INTERVAL_SECONDS", "3600"))
+
+
+async def _dispatch_loop() -> None:
+    """Periodically re-checks every subscriber against the live weather-alert
+    level AND the live cyclone list, texting anyone newly in range. Runs
+    only while at least one Twilio credential is set; otherwise it's a
+    harmless no-op loop (dispatch_* already degrade gracefully with
+    skipped_no_credentials=True)."""
+    while True:
+        try:
+            await sms.dispatch_alerts()
+            await sms.dispatch_cyclone_alerts()
+        except Exception as exc:
+            logger.warning("Scheduled alert dispatch failed: %s", exc)
+        await asyncio.sleep(DISPATCH_INTERVAL_SECONDS)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global _dispatch_task
+    try:
+        wis2.start_listener()
+    except Exception as exc:
+        logger.warning("WIS2 listener failed to start: %s", exc)
+    if sms.sms_configured():
+        _dispatch_task = asyncio.create_task(_dispatch_loop())
+    yield
+    try:
+        wis2.stop_listener()
+    except Exception:
+        pass
+    if _dispatch_task:
+        _dispatch_task.cancel()
+
+
+app = FastAPI(title="Weather Nova API", version="1.0.0", lifespan=lifespan)
 
 # The frontend is served separately (nginx on :8080 in docker-compose, or a
 # plain `python -m http.server` while developing) so CORS must be open.
@@ -77,49 +110,6 @@ class RequestOtpRequest(BaseModel):
 class VerifyOtpRequest(BaseModel):
     phone: str
     otp: str
-
-
-# ---------------------------------------------------------------------------
-# Lifecycle — start/stop the optional WIS2.0 MQTT listener with the app
-# ---------------------------------------------------------------------------
-_dispatch_task: asyncio.Task | None = None
-DISPATCH_INTERVAL_SECONDS = int(os.getenv("ALERT_DISPATCH_INTERVAL_SECONDS", "3600"))
-
-
-async def _dispatch_loop() -> None:
-    """Periodically re-checks every subscriber against the live weather-alert
-    level AND the live cyclone list, texting anyone newly in range. Runs
-    only while at least one Twilio credential is set; otherwise it's a
-    harmless no-op loop (dispatch_* already degrade gracefully with
-    skipped_no_credentials=True)."""
-    while True:
-        try:
-            await sms.dispatch_alerts()
-            await sms.dispatch_cyclone_alerts()
-        except Exception as exc:
-            logger.warning("Scheduled alert dispatch failed: %s", exc)
-        await asyncio.sleep(DISPATCH_INTERVAL_SECONDS)
-
-
-@app.on_event("startup")
-async def on_startup() -> None:
-    global _dispatch_task
-    try:
-        wis2.start_listener()
-    except Exception as exc:
-        logger.warning("WIS2 listener failed to start: %s", exc)
-    if sms.sms_configured():
-        _dispatch_task = asyncio.create_task(_dispatch_loop())
-
-
-@app.on_event("shutdown")
-async def on_shutdown() -> None:
-    try:
-        wis2.stop_listener()
-    except Exception:
-        pass
-    if _dispatch_task:
-        _dispatch_task.cancel()
 
 
 # ---------------------------------------------------------------------------

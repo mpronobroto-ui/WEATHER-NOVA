@@ -13,8 +13,20 @@ Pipeline for every message:
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 
-from . import advisory, alerts as alerts_mod, geocode, gis, i18n, llm, nlu, satellite, weather, wis2
+from . import (
+    advisory,
+    alerts as alerts_mod,
+    geocode,
+    gis,
+    i18n,
+    llm,
+    nlu,
+    satellite,
+    weather,
+    wis2,
+)
 
 
 async def _fast_reply(fallback_text: str, lang: str, user_question: str = "") -> str:
@@ -22,12 +34,16 @@ async def _fast_reply(fallback_text: str, lang: str, user_question: str = "") ->
     if lang == "en" or not llm.llm_available():
         return fallback_text
     return await llm.phrase_reply(
-        fallback_text, i18n.SUPPORTED.get(lang, {}).get("name", lang), fallback_text, user_question=user_question
+        fallback_text,
+        i18n.SUPPORTED.get(lang, {}).get("name", lang),
+        fallback_text,
+        user_question=user_question,
     )
 
 
-
-def _cyclone_map_payload(cyclones, region=None):
+def _cyclone_map_payload(
+    cyclones: list[dict[str, Any]] | None, region: str | None = None
+) -> dict[str, Any] | None:
     for c in cyclones or []:
         if c.get("latest_lat") is not None and c.get("latest_lon") is not None:
             return {
@@ -39,13 +55,12 @@ def _cyclone_map_payload(cyclones, region=None):
     return None
 
 
-
 async def handle_message(
     text: str,
     lang: str = "en",
     client_lat: float | None = None,
     client_lon: float | None = None,
-) -> dict:
+) -> dict[str, Any]:
     lang = lang if lang in i18n.SUPPORTED else "en"
     parsed = nlu.parse_query(text)
 
@@ -63,8 +78,8 @@ async def handle_message(
                 "horizon_days": parsed.horizon_days,
             },
         )
-        intent = refined.get("intent", parsed.intent)
-        location_text = refined.get("location") or parsed.location_text
+        intent = str(refined.get("intent", parsed.intent))
+        location_text: str | None = refined.get("location") or parsed.location_text
         day_offset = int(refined.get("day_offset", parsed.day_offset) or 0)
         horizon_days = int(refined.get("horizon_days", parsed.horizon_days) or 7)
     else:
@@ -75,9 +90,11 @@ async def handle_message(
 
     if intent == "greeting":
         greet = {
-            "en": "Namaste! I'm Weather Nova. Ask me about today's weather, a forecast, alerts, "
-                  "advisories for farming, flying, fishing or your city, or fleet/route questions "
-                  "(best route under rain, driver fog alerts, fleet weather risk) — in any Indian language.",
+            "en": (
+                "Namaste! I'm Weather Nova. Ask me about today's weather, a forecast, alerts, "
+                "advisories for farming, flying, fishing or your city, or fleet/route questions "
+                "(best route under rain, driver fog alerts, fleet weather risk) — in any Indian language."
+            ),
         }
         return {
             "reply": greet["en"],
@@ -110,8 +127,16 @@ async def handle_message(
     is_cyclone_query = intent == "alert" and any(
         w in text.lower()
         for w in (
-            "cyclone", "cyclones", "चक्रवात", "ঘূর্ণিঝড়", "புயல்", "తుఫాను",
-            "तूफान", "typhoon", "hurricane", "depression",
+            "cyclone",
+            "cyclones",
+            "चक्रवात",
+            "ঘূর্ণিঝড়",
+            "புயல்",
+            "తుఫాను",
+            "तूफान",
+            "typhoon",
+            "hurricane",
+            "depression",
         )
     )
 
@@ -119,11 +144,10 @@ async def handle_message(
         # Support "cyclone near Chennai and Kolkata" -> one cyclone report per
         # named place, so two places asked in one message get two separate
         # yes/no answers instead of being merged into a single lookup.
-        requested_locations = nlu.split_multi_location(location_text)
-        if not requested_locations:
-            requested_locations = [None]
+        locs: list[str] = nlu.split_multi_location(location_text)
+        requested_locations: list[str | None] = [loc for loc in locs] if locs else [None]
 
-        async def _cyclone_section(loc: str | None) -> tuple[str, dict]:
+        async def _cyclone_section(loc: str | None) -> tuple[str, dict[str, Any]]:
             region_label = loc or "the requested region"
             try:
                 cyclones = await satellite.get_active_cyclones(region=loc)
@@ -171,7 +195,7 @@ async def handle_message(
             return section, info
 
         sections = []
-        by_location = {}
+        by_location: dict[str, Any] = {}
         first_map = None
         multi = len(requested_locations) > 1
         for loc in requested_locations:
@@ -183,7 +207,7 @@ async def handle_message(
                 first_map = info["map"]
 
         reply = "\n\n".join(sections)
-        data = {
+        data: dict[str, Any] = {
             "data_source": "IMD + NHC CurrentStorms + RAMMB/CIRA TC realtime (+ WIS2 fallback)",
             "map": first_map,
         }
@@ -194,10 +218,10 @@ async def handle_message(
 
         return {"reply": reply, "lang": lang, "intent": "alert", "data": data}
 
-
     # --- resolve location -------------------------------------------------
-    place = None
-    lat = lon = None
+    place: dict[str, Any] | None = None
+    lat: float | None = None
+    lon: float | None = None
     if location_text:
         place = await geocode.resolve_location(location_text, language=lang)
         if place:
@@ -213,6 +237,13 @@ async def handle_message(
         general = await llm.general_weather_answer(text, i18n.SUPPORTED[lang]["name"])
         if general:
             return {"reply": general, "lang": lang, "intent": intent, "data": None}
+        if location_text and place is None:
+            return {
+                "reply": i18n.t(i18n.LOCATION_NOT_FOUND, lang),
+                "lang": lang,
+                "intent": intent,
+                "data": None,
+            }
         return {
             "reply": i18n.t(i18n.NO_LOCATION_PROMPT, lang),
             "lang": lang,
@@ -221,19 +252,8 @@ async def handle_message(
             "needs_location": True,
         }
 
-    if location_text and place is None and client_lat is None:
-        general = await llm.general_weather_answer(text, i18n.SUPPORTED[lang]["name"])
-        if general:
-            return {"reply": general, "lang": lang, "intent": intent, "data": None}
-        return {
-            "reply": i18n.t(i18n.LOCATION_NOT_FOUND, lang),
-            "lang": lang,
-            "intent": intent,
-            "data": None,
-        }
-
-    location_label = place.get("name") or location_text or "your location"
-    if place.get("admin1"):
+    location_label = (place.get("name") if place else None) or location_text or "your location"
+    if place and place.get("admin1"):
         location_label = f"{location_label}, {place['admin1']}"
 
     # Parallel: district GIS + forecast (faster response)
@@ -241,16 +261,24 @@ async def handle_message(
         gis.lookup_district(lat, lon),
         weather.get_forecast(lat, lon, days=max(horizon_days, day_offset + 1)),
     )
-    if forecast.get("error") == "rate_limited":
+    if forecast.get("error") or not forecast.get("daily") or not forecast.get("daily", {}).get("time"):
+        reason = forecast.get("reason", "Weather models temporarily unreachable. Please retry.")
+        error_msg = f"Sorry, live weather data for {location_label} could not be retrieved at this moment ({reason})."
+        if lang != "en":
+            error_msg = await _fast_reply(error_msg, lang, user_question=text)
         return {
-            "reply": (
-                f"Weather models are briefly rate-limited. Please wait a few seconds and try again "
-                f"for {place.get('name') if place else location_text or 'your location'}."
-            ),
+            "reply": error_msg,
             "lang": lang,
             "intent": intent,
-            "data": {"error": "rate_limited"},
+            "data": {
+                "error": True,
+                "reason": reason,
+                "location": location_label,
+                "coordinates": {"lat": lat, "lon": lon},
+                "map": {"lat": lat, "lon": lon, "label": location_label, "zoom": 8} if lat and lon else None,
+            },
         }
+
     daily = forecast.get("daily", {})
     timeline = alerts_mod.build_alert_timeline(daily)
     idx = min(day_offset, len(timeline) - 1) if timeline else 0
@@ -259,7 +287,8 @@ async def handle_message(
     today_alert = timeline[idx] if timeline else {"level": "green", "hazards": []}
     current = forecast.get("current_weather", {})
 
-    payload = {
+    today_level = str(today_alert.get("level", "green"))
+    payload: dict[str, Any] = {
         "location": location_label,
         "coordinates": {"lat": lat, "lon": lon},
         "district": district,
@@ -267,7 +296,7 @@ async def handle_message(
         "day": day_data,
         "date": daily.get("time", [None])[idx] if daily.get("time") else None,
         "alert": today_alert,
-        "alert_label": i18n.alert_label(today_alert["level"], lang),
+        "alert_label": i18n.alert_label(today_level, lang),
         "timeline": timeline,
     }
     payload["map"] = {"lat": lat, "lon": lon, "label": location_label, "zoom": 8}
@@ -289,13 +318,12 @@ async def handle_message(
         precip_mm = day_data.get("precipitation_sum")
         advice = satellite.rain_advice(rain_prob, precip_mm)
         day_label = "today" if day_offset == 0 else ("tomorrow" if day_offset == 1 else f"in {day_offset} days")
-        date_str = payload.get("date") or day_label
 
         fallback_text = (
             f"{advice['verdict']}. {advice['detail']} {day_label} in {location_label}. "
             f"{advice['tip']}"
         )
-        # Strong deterministic reply so the user always gets a clear yes/no + % 
+        # Strong deterministic reply so the user always gets a clear yes/no + %
         # even when the optional LLM is offline or rephrases poorly.
         reply = fallback_text
         if lang != "en":
@@ -313,22 +341,38 @@ async def handle_message(
         )
 
     elif intent in ("current", "forecast"):
-        condition = weather.weather_code_label(day_data.get("weathercode"))
-        temp = current.get("temperature", day_data.get("temperature_2m_max"))
+        condition = weather.weather_code_label(day_data.get("weathercode") or current.get("weathercode"))
+        temp = current.get("temperature") or current.get("temperature_2m") or day_data.get("temperature_2m_max")
+        tmin = day_data.get("temperature_2m_min") if day_data.get("temperature_2m_min") is not None else temp
+        tmax = day_data.get("temperature_2m_max") if day_data.get("temperature_2m_max") is not None else temp
+        rain_prob = (
+            day_data.get("precipitation_probability_max")
+            if day_data.get("precipitation_probability_max") is not None
+            else 0
+        )
+        wind = (
+            current.get("windspeed")
+            if current.get("windspeed") is not None
+            else (
+                current.get("wind_speed_10m")
+                if current.get("wind_speed_10m") is not None
+                else (day_data.get("windspeed_10m_max") or 0)
+            )
+        )
+
         fallback_text = i18n.t(i18n.CURRENT_TEMPLATE, lang).format(
             location=location_label,
             condition=condition,
             temp=round(temp, 1) if temp is not None else "—",
-            tmin=round(day_data.get("temperature_2m_min", 0), 1),
-            tmax=round(day_data.get("temperature_2m_max", 0), 1),
-            rain_prob=day_data.get("precipitation_probability_max", 0),
-            wind=round(day_data.get("windspeed_10m_max", 0), 1),
+            tmin=round(tmin, 1) if tmin is not None else "—",
+            tmax=round(tmax, 1) if tmax is not None else "—",
+            rain_prob=rain_prob,
+            wind=round(wind, 1),
         )
         summary_for_llm = (
             f"Location: {location_label}. Condition: {condition}. "
-            f"Current temp: {temp}C. Today's range: {day_data.get('temperature_2m_min')}-"
-            f"{day_data.get('temperature_2m_max')}C. Rain chance: {day_data.get('precipitation_probability_max')}%. "
-            f"Wind up to {day_data.get('windspeed_10m_max')} km/h. "
+            f"Current temp: {temp}C. Today's range: {tmin}-{tmax}C. Rain chance: {rain_prob}%. "
+            f"Wind: {wind} km/h. "
             f"Alert level: {today_alert['level']} ({', '.join(today_alert['hazards']) or 'no hazards'})."
         )
         if intent == "forecast":
@@ -338,14 +382,22 @@ async def handle_message(
             summary_for_llm += " Outlook: " + "; ".join(week_bits)
             payload["outlook"] = timeline[: horizon_days]
 
-        reply = await llm.phrase_reply(summary_for_llm, i18n.SUPPORTED[lang]["name"], fallback_text, user_question=text)
+        reply = await llm.phrase_reply(
+            summary_for_llm,
+            i18n.SUPPORTED[lang]["name"],
+            fallback_text,
+            user_question=text,
+        )
 
     elif intent == "alert":
-        if today_alert["level"] == "green":
-            fallback_text = f"No significant weather warnings for {location_label} today ({i18n.alert_label('green', lang)})."
+        if today_level == "green":
+            fallback_text = (
+                f"No significant weather warnings for {location_label} today "
+                f"({i18n.alert_label('green', lang)})."
+            )
         else:
             fallback_text = (
-                f"{i18n.alert_label(today_alert['level'], lang)} warning for {location_label}: "
+                f"{i18n.alert_label(today_level, lang)} warning for {location_label}: "
                 f"{', '.join(today_alert['hazards'])}."
             )
         # Enrich with any active cyclones from satellite / IMD feed
@@ -353,7 +405,12 @@ async def handle_message(
             names = ", ".join(c["name"] for c in cyclones[:3])
             fallback_text += f" Active cyclone(s) being monitored: {names}."
         summary_for_llm = fallback_text
-        reply = await llm.phrase_reply(summary_for_llm, i18n.SUPPORTED[lang]["name"], fallback_text, user_question=text)
+        reply = await llm.phrase_reply(
+            summary_for_llm,
+            i18n.SUPPORTED[lang]["name"],
+            fallback_text,
+            user_question=text,
+        )
         payload["outlook"] = timeline
         live_bulletins = wis2.get_recent_bulletins(limit=3)
         if live_bulletins:
@@ -364,10 +421,11 @@ async def handle_message(
         trend = weather.summarize_yearly_trend(hist)
         payload["climate_trend"] = trend
         recent = trend[-5:] if len(trend) >= 5 else trend
-        fallback_text = "10-year climate snapshot for {}: {}.".format(
-            location_label,
-            "; ".join(f"{r['year']} avg max {r['avg_max_temp_c']}°C, rain {r['total_rainfall_mm']}mm" for r in recent),
+        trend_str = "; ".join(
+            f"{r['year']} avg max {r['avg_max_temp_c']}°C, rain {r['total_rainfall_mm']}mm"
+            for r in recent
         )
+        fallback_text = f"10-year climate snapshot for {location_label}: {trend_str}."
         reply = await _fast_reply(fallback_text, lang, user_question=text)
 
     elif intent == "agriculture":
@@ -393,7 +451,11 @@ async def handle_message(
             marine_data = await weather.get_marine_forecast(lat, lon)
             marine_daily = marine_data.get("daily", {}) if not marine_data.get("error") else {}
             if marine_daily:
-                marine_day = {k: (v[idx] if idx < len(v) else None) for k, v in marine_daily.items() if k != "time"}
+                marine_day = {
+                    k: (v[idx] if idx < len(v) else None)
+                    for k, v in marine_daily.items()
+                    if k != "time"
+                }
         except Exception:
             marine_day = None
         tips = advisory.marine_advisory(day_data, today_alert, marine_day=marine_day)
@@ -441,7 +503,9 @@ async def handle_message(
             f"Wind: {summary['wind_outlook']} (avg ~{summary['avg_windspeed_80m_kmh']} km/h at 80 m)."
         )
         payload["energy_forecast"] = summary
-        payload["data_source"] = "Open-Meteo hourly shortwave radiation + 80m wind speed (real NWP data)"
+        payload["data_source"] = (
+            "Open-Meteo hourly shortwave radiation + 80m wind speed (real NWP data)"
+        )
         reply = await _fast_reply(fallback_text, lang, user_question=text)
 
     elif intent == "retail":

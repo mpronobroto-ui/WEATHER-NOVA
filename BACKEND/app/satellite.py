@@ -10,6 +10,7 @@ Satellite-informed weather & cyclone data layer.
 """
 from __future__ import annotations
 
+import asyncio
 import difflib
 import logging
 import re
@@ -51,13 +52,13 @@ async def get_active_cyclones(region: str | None = None) -> list[dict[str, Any]]
     storms: list[dict[str, Any]] = []
     seen = set()
 
-    for fetcher in (_fetch_rammb, _fetch_nhc, _fetch_imd):
-        try:
-            batch = await fetcher()
-        except Exception as exc:
-            logger.debug("%s failed: %s", fetcher.__name__, exc)
-            batch = []
+    # Fetch sources concurrently for speed
+    results = await asyncio.gather(_fetch_rammb(), _fetch_nhc(), _fetch_imd(), return_exceptions=True)
+    for batch in results:
+        if isinstance(batch, BaseException) or not isinstance(batch, list):
+            continue
         for s in batch:
+
             key = (s.get("name") or "").upper().strip()
             if not key or key in seen:
                 continue
@@ -321,27 +322,29 @@ def _to_float(v) -> Optional[float]:
         return None
 
 
-def rain_advice(prob: Optional[float], precip_mm: Optional[float] = None) -> dict[str, str]:
-    p = float(prob) if prob is not None else 0.0
-    mm = float(precip_mm) if precip_mm is not None else 0.0
+def rain_advice(prob: Optional[float], precip_mm: Optional[float] = None) -> dict[str, Any]:
+
+    p = prob if prob is not None else 0.0
+    mm = precip_mm if precip_mm is not None else 0.0
+    pct = round(p)
 
     if p <= 5 and mm < 0.2:
-        verdict, detail, tip = "No", f"There is a {int(round(p))}% chance of rain", "You can leave the umbrella at home."
+        verdict, detail, tip = "No", f"There is a {pct}% chance of rain", "You can leave the umbrella at home."
     elif p <= 20:
-        verdict, detail, tip = "Probably not", f"Only a {int(round(p))}% chance of rain", "A light jacket is enough; umbrella optional."
+        verdict, detail, tip = "Probably not", f"Only a {pct}% chance of rain", "A light jacket is enough; umbrella optional."
     elif p <= 40:
-        verdict, detail, tip = "Maybe", f"Around {int(round(p))}% chance of rain", "Keep a compact umbrella handy just in case."
+        verdict, detail, tip = "Maybe", f"Around {pct}% chance of rain", "Keep a compact umbrella handy just in case."
     elif p <= 60:
-        verdict, detail, tip = "Yes, better take one", f"{int(round(p))}% chance of rain", "Carry an umbrella."
+        verdict, detail, tip = "Yes, better take one", f"{pct}% chance of rain", "Carry an umbrella."
     else:
-        verdict, detail, tip = "Yes, definitely", f"High chance of rain ({int(round(p))}%)", "Take a sturdy umbrella or raincoat."
+        verdict, detail, tip = "Yes, definitely", f"High chance of rain ({pct}%)", "Take a sturdy umbrella or raincoat."
     if mm >= 10:
         tip += f" Expected rainfall ~{mm:.1f} mm."
     return {
         "verdict": verdict,
         "detail": detail,
         "tip": tip,
-        "probability_pct": int(round(p)),
+        "probability_pct": pct,
         "expected_mm": round(mm, 1),
     }
 

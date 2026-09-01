@@ -25,6 +25,7 @@ from __future__ import annotations
 import logging
 import math
 import os
+from typing import Any
 
 import httpx
 
@@ -47,7 +48,7 @@ _LEVEL_RANK = {"green": 0, "yellow": 1, "orange": 2, "red": 3}
 CYCLONE_ALERT_RADIUS_KM = float(os.getenv("CYCLONE_ALERT_RADIUS_KM", "100"))
 
 
-def _haversine_km(lat1, lon1, lat2, lon2) -> float:
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     r = 6371.0
     p1, p2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
@@ -61,7 +62,7 @@ def sms_configured() -> bool:
 
 
 async def _send_sms(to_phone: str, body: str) -> bool:
-    if not sms_configured():
+    if not (TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER):
         return False
     url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
     data = {"From": TWILIO_FROM_NUMBER, "To": to_phone, "Body": body}
@@ -80,7 +81,7 @@ async def dispatch_alerts() -> dict:
     (used by the /api/alerts/dispatch endpoint and the background task).
     """
     subs = subscriptions.list_subscriptions()
-    results = {"checked": 0, "warned": 0, "sent": 0, "skipped_no_credentials": not sms_configured(), "details": []}
+    results: dict[str, Any] = {"checked": 0, "warned": 0, "sent": 0, "skipped_no_credentials": not sms_configured(), "details": []}
 
     for sub in subs:
         results["checked"] += 1
@@ -92,16 +93,19 @@ async def dispatch_alerts() -> dict:
             results["details"].append({"phone": sub["phone"], "error": str(exc)})
             continue
 
-        if _LEVEL_RANK.get(today["level"], 0) >= _LEVEL_RANK.get(DISPATCH_MIN_LEVEL, 2):
+        today_level = str(today.get("level", "green"))
+        today_hazards = list(today.get("hazards", []))
+
+        if _LEVEL_RANK.get(today_level, 0) >= _LEVEL_RANK.get(DISPATCH_MIN_LEVEL, 2):
             results["warned"] += 1
-            lang = sub.get("lang", "en")
-            label = i18n.alert_label(today["level"], lang)
-            hazards = ", ".join(today["hazards"]) or "severe weather"
-            body = f"WeatherGPT alert [{label}]: {hazards} expected near your location today. Stay safe."
+            lang = str(sub.get("lang", "en"))
+            label = i18n.alert_label(today_level, lang)
+            hazards = ", ".join(today_hazards) or "severe weather"
+            body = f"Weather Nova alert [{label}]: {hazards} expected near your location today. Stay safe."
             sent = await _send_sms(sub["phone"], body)
             if sent:
                 results["sent"] += 1
-            results["details"].append({"phone": sub["phone"], "level": today["level"], "hazards": today["hazards"], "sms_sent": sent})
+            results["details"].append({"phone": sub["phone"], "level": today_level, "hazards": today_hazards, "sms_sent": sent})
 
     return results
 
@@ -114,7 +118,7 @@ async def dispatch_cyclone_alerts() -> dict:
     this run — call this on a timer (see main.py startup loop).
     """
     subs = [s for s in subscriptions.list_subscriptions() if s.get("cyclone_alerts", True)]
-    results = {"checked": 0, "warned": 0, "sent": 0, "skipped_no_credentials": not sms_configured(), "details": []}
+    results: dict[str, Any] = {"checked": 0, "warned": 0, "sent": 0, "skipped_no_credentials": not sms_configured(), "details": []}
     if not subs:
         return results
 

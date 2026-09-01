@@ -103,9 +103,11 @@ LOCATION_NOT_FOUND = {
 }
 
 
-def t(table: dict, lang: str) -> str:
-    return table.get(lang, table.get("en"))
+def t(table: dict[str, str], lang: str) -> str:
+    return table.get(lang, table.get("en", ""))
 
 
 def alert_label(level: str, lang: str) -> str:
-    return ALERT_LABEL.get(level, ALERT_LABEL["green"]).get(lang, ALERT_LABEL[level]["en"])
+    level_dict = ALERT_LABEL.get(level, ALERT_LABEL["green"])
+    return level_dict.get(lang, level_dict.get("en", "Green"))
+
