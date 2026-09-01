@@ -158,9 +158,13 @@
   }
 
   *{box-sizing:border-box;}
-  html,body{height:100%;}
-  body{
+  html,body{
+    height:100%;
+    height:100dvh;
     margin:0;
+    overflow:hidden;
+  }
+  body{
     background:
       radial-gradient(1200px 600px at 85% -10%, rgba(79,168,216,0.10), transparent 60%),
       radial-gradient(900px 500px at -10% 110%, rgba(46,158,91,0.06), transparent 55%),
@@ -181,10 +185,12 @@
   .app{
     max-width:920px;
     margin:0 auto;
-    min-height:100vh;
+    height:100%;
+    height:100dvh;
     display:flex;
     flex-direction:column;
     position:relative;
+    overflow:hidden;
   }
 
   /* ---------- Header : the bulletin masthead ---------- */
@@ -194,6 +200,7 @@
     position:sticky; top:0; z-index:20;
     background:var(--masthead-bg);
     backdrop-filter:blur(8px);
+    flex:none;
   }
   .masthead-row{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
@@ -239,6 +246,7 @@
     display:flex; gap:8px; padding:12px 18px; overflow-x:auto;
     border-bottom:1px solid var(--line-700);
     scrollbar-width:none;
+    flex:none;
   }
   .chip-row::-webkit-scrollbar{display:none;}
   .chip{
@@ -253,8 +261,30 @@
 
   /* ---------- Chat transcript ---------- */
   main.transcript{
-    flex:1; padding:20px 18px 10px; display:flex; flex-direction:column; gap:16px;
+    flex:1 1 0%;
+    min-height:0;
+    padding:20px 18px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
     overflow-y:auto;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+    scrollbar-color:var(--line-700) transparent;
+  }
+  main.transcript::-webkit-scrollbar{
+    width:6px;
+  }
+  main.transcript::-webkit-scrollbar-track{
+    background:transparent;
+  }
+  main.transcript::-webkit-scrollbar-thumb{
+    background:var(--line-700);
+    border-radius:999px;
+  }
+  main.transcript::-webkit-scrollbar-thumb:hover{
+    background:var(--fog-500);
   }
   .msg{max-width:86%; display:flex; flex-direction:column; gap:6px; animation:rise .28s ease both;}
   @keyframes rise{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
@@ -317,6 +347,7 @@
     border-bottom:1px solid var(--line-700);
     background:var(--panel-800);
     color:var(--fog-500);
+    flex:none;
   }
   .pill-ok{background:var(--pill-ok-bg); color:var(--pill-ok-text); border:1px solid var(--pill-ok-border); border-radius:999px; padding:2px 8px; font-weight:500;}
   .pill-warn{background:var(--pill-warn-bg); color:var(--pill-warn-text); border:1px solid var(--pill-warn-border); border-radius:999px; padding:2px 8px; font-weight:500;}
@@ -326,6 +357,7 @@
     border-bottom:1px solid var(--line-700);
     background:var(--panel-800);
     color:var(--fog-300);
+    flex:none;
   }
   .hazard-chip{
     font-size:11px; padding:4px 9px; border-radius:100px;
@@ -346,10 +378,18 @@
 
   /* ---------- Composer ---------- */
   .composer{
+    flex:none;
+    position:sticky;
+    bottom:0;
+    z-index:20;
     padding:12px 14px calc(14px + env(safe-area-inset-bottom));
     border-top:1px solid var(--line-700);
     background:var(--composer-bg);
+    box-shadow:0 -4px 20px rgba(0,0,0,0.18);
     display:flex; flex-direction:column; gap:8px;
+  }
+  [data-theme="light"] .composer{
+    box-shadow:0 -4px 20px rgba(15,23,42,0.06);
   }
   .composer-row{display:flex; align-items:flex-end; gap:8px;}
   select.lang-select{

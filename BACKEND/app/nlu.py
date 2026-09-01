@@ -242,42 +242,49 @@ def _extract_location(raw_text: str, intent: str, matched_keywords: list[str]) -
 
     # common connector patterns: "weather in X", "for X", "near X", "around X"
     m = re.search(
-        r"(?:in|at|for|near|around|over|of)\s+([A-Za-z\u0900-\u097F\u0980-\u09FF\u0B80-\u0BFF\u0C00-\u0C7F .]+?)(?:\?|$|,)",
+        r"(?:in|at|for|near|around|over|of)\s+([A-Za-z\u0900-\u097F\u0980-\u09FF\u0B80-\u0BFF\u0C00-\u0C7F .,]+?)(?:\?|$)",
         text,
         re.IGNORECASE,
     )
     if m:
         candidate = m.group(1).strip(" ?.!,")
-        parts = [p for p in candidate.split() if p.lower() not in STOPWORDS and p.lower() not in DAY_WORDS]
-        candidate = " ".join(parts).strip()
-        if candidate:
-            return candidate
+        segments = [s.strip() for s in candidate.split(",")]
+        clean_segments = []
+        for seg in segments:
+            parts = [p for p in seg.split() if p.lower() not in STOPWORDS and p.lower() not in DAY_WORDS]
+            if parts:
+                clean_segments.append(" ".join(parts))
+        if clean_segments:
+            return ", ".join(clean_segments).strip()
 
-    # strip stopwords token by token, keep the remainder
-    tokens = re.findall(r"[\w\u0900-\u097F\u0980-\u09FF\u0B80-\u0BFF\u0C00-\u0C7F]+", text)
-    remainder = [
-        tok for tok in tokens
-        if tok.lower() not in STOPWORDS and tok.lower() not in DAY_WORDS and len(tok) > 1
-    ]
-    if remainder:
-        return " ".join(remainder).strip()
+    # strip stopwords token by token, preserving comma-separated parts if present
+    segments = [s.strip() for s in text.split(",")]
+    clean_segments = []
+    for seg in segments:
+        tokens = re.findall(r"[\w\u0900-\u097F\u0980-\u09FF\u0B80-\u0BFF\u0C00-\u0C7F]+", seg)
+        rem = [
+            tok for tok in tokens
+            if tok.lower() not in STOPWORDS and tok.lower() not in DAY_WORDS and len(tok) > 1
+        ]
+        if rem:
+            clean_segments.append(" ".join(rem))
+    if clean_segments:
+        return ", ".join(clean_segments).strip()
     return None
 
 
 _LOCATION_SPLIT_RE = re.compile(
-    r"\s*(?:,|/|\bvs\.?\b|\band\b|\b&\b|\bas well as\b)\s*", re.IGNORECASE
+    r"\s*(?:/|\bvs\.?\b|\band\b|\b&\b|\bas well as\b)\s*", re.IGNORECASE
 )
 
 
 def split_multi_location(text: str | None) -> list[str]:
-    """Split a location phrase that may name more than one place.
+    """Split a location phrase that names multiple distinct places.
 
     'Chennai and Kolkata' -> ['Chennai', 'Kolkata']
-    'Mumbai'              -> ['Mumbai']
+    'Mumbai / Pune'       -> ['Mumbai', 'Pune']
+    'Rajarhat, Kolkata'   -> ['Rajarhat, Kolkata'] (preserved as single qualified place)
     None / ''             -> []
-
-    Word-boundary matching on 'and'/'vs'/'&' avoids splitting inside place
-    names that happen to contain those letters (e.g. "Andaman").
     """
     if not text or not text.strip():
         return []
